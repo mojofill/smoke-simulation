@@ -1,0 +1,193 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+// ping
+layout (binding = 0, r32f) uniform readonly image2D smokeMapInput;
+layout (binding = 1, r32f) uniform readonly image2D horizontalVelocitiesInput;
+layout (binding = 2, r32f) uniform readonly image2D verticalVelocitiesInput;
+layout (binding = 3, r32f) uniform readonly image2D pressureMapInput;
+layout (binding = 4, r8ui) uniform readonly uimage2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
+
+// pong
+layout (binding = 5, r32f) uniform writeonly image2D smokeMapOutput;
+layout (binding = 6, r32f) uniform writeonly image2D horizontalVelocitiesOutput;
+layout (binding = 7, r32f) uniform writeonly image2D verticalVelocitiesOutput;
+layout (binding = 8, r32f) uniform writeonly image2D pressureMapOutput;
+layout (binding = 9, r8ui) uniform writeonly uimage2D solidMapOutput;
+
+// ubo
+layout (binding = 10) uniform UniformBufferObject {
+    int width;
+    int height;
+    float density;
+    float dt;
+    float weightSOR;
+};
+
+bool isSolid(ivec2 pos) {
+    int x = pos.x;
+    int y = pos.y;
+    return (x < 0 || x >= width || y < 0 || y >= height) ? true : imageLoad(solidMapInput, pos).x == 1;
+}
+
+bool isSolid(int x, int y) {
+    return (x < 0 || x >= width || y < 0 || y >= height) ? true : imageLoad(solidMapInput, ivec2(x, y)).x == 1;
+}
+
+float getPressure(ivec2 cellPos) {
+    int x = cellPos.x;
+    int y = cellPos.y;
+    return (x < 0 || x >= width || y < 0 || y >= height) ? 0.0f : imageLoad(pressureMapInput, cellPos).x;
+}
+
+float getPressure(int x, int y) {
+    return (x < 0 || x >= width || y < 0 || y >= height) ? 0.0f : imageLoad(pressureMapInput, ivec2(x, y)).x;
+}
+
+// dumbass glsl doesnt allow passing images as arguments
+// need to create separate ones
+float sampleBilinearHorizontal(float x, float y, float offsetX, float offsetY) {
+    ivec2 size = imageSize(horizontalVelocitiesInput);
+    int count_x = size.x;
+    int count_y = size.y;
+
+    float px = x + offsetX;
+    float py = y + offsetY;
+
+    int left = int(clamp(floor(px), 0, count_x - 2));
+    int bottom = int(clamp(floor(py), 0, count_y - 2));
+    int right = left + 1;
+    int top = bottom + 1;
+
+    float xFrac = clamp(px - left, 0, 1);
+    float yFrac = clamp(py - bottom, 0, 1);
+
+    float valueTop = mix( // use mix instead of lerp
+        imageLoad(horizontalVelocitiesInput, ivec2(left, top)).x,
+        imageLoad(horizontalVelocitiesInput, ivec2(right, top)).x,
+        xFrac
+    );
+
+    float valueBottom = mix(
+        imageLoad(horizontalVelocitiesInput, ivec2(left, bottom)).x,
+        imageLoad(horizontalVelocitiesInput, ivec2(right, bottom)).x,
+        xFrac
+    );
+
+    return mix(valueBottom, valueTop, yFrac);
+}
+
+float sampleBilinearVertical(float x, float y, float offsetX, float offsetY) {
+    ivec2 size = imageSize(verticalVelocitiesInput);
+    int count_x = size.x;
+    int count_y = size.y;
+
+    float px = x + offsetX;
+    float py = y + offsetY;
+
+    int left = int(clamp(floor(px), 0, count_x - 2));
+    int bottom = int(clamp(floor(py), 0, count_y - 2));
+    int right = left + 1;
+    int top = bottom + 1;
+
+    float xFrac = clamp(px - left, 0, 1);
+    float yFrac = clamp(py - bottom, 0, 1);
+
+    float valueTop = mix( // use mix instead of lerp
+        imageLoad(verticalVelocitiesInput, ivec2(left, top)).x,
+        imageLoad(verticalVelocitiesInput, ivec2(right, top)).x,
+        xFrac
+    );
+
+    float valueBottom = mix(
+        imageLoad(verticalVelocitiesInput, ivec2(left, bottom)).x,
+        imageLoad(verticalVelocitiesInput, ivec2(right, bottom)).x,
+        xFrac
+    );
+
+    return mix(valueBottom, valueTop, yFrac);
+}
+
+vec2 getVelocityAtPos(float px, float py) {
+    float vx = sampleBilinearHorizontal(px, py, 0, -0.5);
+    float vy = sampleBilinearVertical(px, py, -0.5, 0);
+
+    return vec2(vx, vy);
+}
+
+void semiLagrangianAdvectVelocities() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    int x = pos.x;
+    int y = pos.y;
+
+    // horizontal velocities
+    if (!isSolid(x - 1, y) && !isSolid(x, y)) {
+        // Find center of left edge
+        float left_x = x;
+        float left_y = y + 0.5;
+
+        vec2 vel = getVelocityAtPos(left_x, left_y);
+        float vx = vel.x;
+        float vy = vel.y;
+
+        // Take one step backwards to find the which position the imposed particle at (x, y) would have came from
+        // using the velocity at (x, y)
+        float prev_x = left_x - vx * dt;
+        float prev_y = left_y - vy * dt;
+
+        imageStore(horizontalVelocitiesOutput, ivec2(x, y), vec4(getVelocityAtPos(prev_x, prev_y).x));
+    }
+
+    // OHHH i never fucking did vertical LMFAO
+    if (!isSolid(x, y) && !isSolid(x, y - 1)) {
+        // Find center of bottom edge
+        float bottom_x = x + 0.5;
+        float bottom_y = y;
+
+        vec2 vel = getVelocityAtPos(bottom_x, bottom_y);
+        float vx = vel.x;
+        float vy = vel.y;
+
+        float prev_x = bottom_x - vx * dt;
+        float prev_y = bottom_y - vy * dt;
+
+        imageStore(verticalVelocitiesOutput, ivec2(x, y), vec4(getVelocityAtPos(prev_x, prev_y).y));
+    }
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+
+    // do go beyond extra threads
+    if (pos.x >= width || pos.y >= height) return;
+
+    imageStore(smokeMapOutput, pos, imageLoad(smokeMapInput, pos));
+    imageStore(horizontalVelocitiesOutput, pos, imageLoad(horizontalVelocitiesInput, pos));
+    imageStore(verticalVelocitiesOutput, pos, imageLoad(verticalVelocitiesInput, pos));
+    imageStore(solidMapOutput, pos, imageLoad(solidMapInput, pos));
+
+    // also load in the +1
+    if (pos.x == width - 1) {
+        imageStore(horizontalVelocitiesOutput, pos + ivec2(1, 0), imageLoad(horizontalVelocitiesInput, pos + ivec2(1, 0)));
+    }
+    if (pos.y == height - 1) {
+        imageStore(verticalVelocitiesOutput, pos + ivec2(0, 1), imageLoad(verticalVelocitiesInput, pos + ivec2(0, 1)));
+    }
+    imageStore(pressureMapOutput, pos, imageLoad(pressureMapInput, pos));
+
+    if (!isSolid(pos) && !isSolid(pos - ivec2(1, 0)) && !isSolid(pos - ivec2(0, 1))) {
+        // ig here add some stuff to the smoke map
+        float r = 10;
+        if (false
+        || (pos.x - (width/2 - 600)) * (pos.x - (width/2 - 600)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
+        // || (pos.x - (width/2 + 100)) * (pos.x - (width/2 + 100)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
+        // || (pos.x - (width/2)) * (pos.x - (width/2)) + ((pos.y - (height/2 - 100))) * (pos.y - (height/2 - 100)) <= r * r
+        // || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2 + 100)) * (pos.y - (height/2 + 100)) <= r * r
+        // || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
+            ) {
+            imageStore(smokeMapOutput, pos, vec4(1));
+        }
+    }
+
+    semiLagrangianAdvectVelocities();
+}

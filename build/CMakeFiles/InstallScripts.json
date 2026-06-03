@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/henryzhang/Documents/vulkan-projects/smoke-simulation/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

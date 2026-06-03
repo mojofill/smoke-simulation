@@ -1,0 +1,109 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+// ping
+layout (binding = 0, r32f) uniform readonly image2D smokeMapInput;
+layout (binding = 1, r32f) uniform readonly image2D horizontalVelocitiesInput;
+layout (binding = 2, r32f) uniform readonly image2D verticalVelocitiesInput;
+layout (binding = 3, r32f) uniform readonly image2D pressureMapInput;
+layout (binding = 4, r8ui) uniform readonly uimage2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
+
+// pong
+layout (binding = 5, r32f) uniform writeonly image2D smokeMapOutput;
+layout (binding = 6, r32f) uniform writeonly image2D horizontalVelocitiesOutput;
+layout (binding = 7, r32f) uniform writeonly image2D verticalVelocitiesOutput;
+layout (binding = 8, r32f) uniform writeonly image2D pressureMapOutput;
+layout (binding = 9, r8ui) uniform writeonly uimage2D solidMapOutput;
+
+// ubo
+layout (binding = 10) uniform UniformBufferObject {
+    int width;
+    int height;
+    float density;
+    float dt;
+    float weightSOR;
+};
+
+bool isSolid(ivec2 pos) {
+    int x = pos.x;
+    int y = pos.y;
+    return (x < 0 || x >= width || y < 0 || y >= height) ? true : imageLoad(solidMapInput, pos).x == 1;
+}
+
+bool isSolid(int x, int y) {
+    return (x < 0 || x >= width || y < 0 || y >= height) ? true : imageLoad(solidMapInput, ivec2(x, y)).x == 1;
+}
+
+float getPressure(ivec2 cellPos) {
+    int x = cellPos.x;
+    int y = cellPos.y;
+    return (x < 0 || x >= width || y < 0 || y >= height) ? 0.0f : imageLoad(pressureMapInput, cellPos).x;
+}
+
+float getPressure(int x, int y) {
+    return (x < 0 || x >= width || y < 0 || y >= height) ? 0.0f : imageLoad(pressureMapInput, ivec2(x, y)).x;
+}
+
+void updateVelocities() {
+    float k = dt / density;
+
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    int x = pos.x;
+    int y = pos.y;
+
+    // horizontal
+    if (isSolid(x, y) || isSolid(x - 1, y)) {
+        imageStore(horizontalVelocitiesOutput, ivec2(x, y), vec4(0));
+    }
+    else {
+        float pressureRight = getPressure(x, y);
+        float pressureLeft = getPressure(x - 1, y);
+
+        imageStore(
+            horizontalVelocitiesOutput,
+            ivec2(x, y),
+            vec4(imageLoad(horizontalVelocitiesInput, ivec2(x, y)).x - k * (pressureRight - pressureLeft))
+        );
+    }
+
+    // vertical
+    if (isSolid(x, y) || isSolid(x, y - 1)) {
+        imageStore(verticalVelocitiesOutput, ivec2(x, y), vec4(0));
+    }
+    else {
+        float pressureTop = getPressure(x, y);
+        float pressureBottom = getPressure(x, y - 1);
+
+        imageStore(
+            verticalVelocitiesOutput,
+            ivec2(x, y),
+            vec4(imageLoad(verticalVelocitiesInput, ivec2(x, y)).x - k * (pressureTop - pressureBottom))
+        );
+    }
+}
+
+void main() {
+    // always move ping pong over, just in case
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+
+    // do go beyond extra threads
+    if (pos.x >= width || pos.y >= height) return;
+
+    imageStore(smokeMapOutput, pos, imageLoad(smokeMapInput, pos));
+    imageStore(horizontalVelocitiesOutput, pos, imageLoad(horizontalVelocitiesInput, pos));
+    imageStore(verticalVelocitiesOutput, pos, imageLoad(verticalVelocitiesInput, pos));
+    imageStore(solidMapOutput, pos, imageLoad(solidMapInput, pos));
+
+    // also load in the +1
+    if (pos.x == 799) {
+        imageStore(horizontalVelocitiesOutput, pos + ivec2(1, 0), imageLoad(horizontalVelocitiesInput, pos + ivec2(1, 0)));
+    }
+    if (pos.y == 799) {
+        imageStore(verticalVelocitiesOutput, pos + ivec2(0, 1), imageLoad(verticalVelocitiesInput, pos + ivec2(0, 1)));
+    }
+
+    imageStore(pressureMapOutput, pos, imageLoad(pressureMapInput, pos));
+
+    // finally do what this compute shader is supposed to do:
+    updateVelocities();
+}
