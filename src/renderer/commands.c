@@ -58,21 +58,19 @@ void recordCommands(vk_context *vko, uint32_t currentFrame, int imageIndex) {
     vko->ping = vko->ping == 0 ? 1 : 0;
 
     // then solve for pressure
-    for (int iter = 0; iter < 16; iter++) {
+    for (int iter = 0; iter < 20; iter++) {
         vkCmdBindPipeline(vko->commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, vko->pressureSolveComputePipeline);
-
-        // THANK GOD FOR PUSH CONSTANTS!!!!
 
         PushConstants constants;
         constants.ping = (iter % 2);
 
         vkCmdPushConstants(
             vko->commandBuffers[i],
-            vko->pressureSolveComputePipelineLayout, // The layout that allows push constants
-            VK_SHADER_STAGE_COMPUTE_BIT,             // Must match the stage flag in Step 2
-            0,                                       // Offset
-            sizeof(struct PushConstants),            // Size
-            &constants                               // Pointer to CPU data
+            vko->pressureSolveComputePipelineLayout,
+            VK_SHADER_STAGE_COMPUTE_BIT,
+            0,
+            sizeof(struct PushConstants),
+            &constants
         );
 
         vkCmdBindDescriptorSets(vko->commandBuffers[i], VK_PIPELINE_BIND_POINT_COMPUTE, vko->pressureSolveComputePipelineLayout, 0, 1, &vko->descriptorSets[vko->ping][currentFrame], 0, NULL);
@@ -144,5 +142,23 @@ void recordCommands(vk_context *vko, uint32_t currentFrame, int imageIndex) {
     vkCmdDraw(vko->commandBuffers[i], 6, 1, 0, 0);
 
     vkCmdEndRenderPass(vko->commandBuffers[i]);
+
+    // transition swapchain image
+    // copy image -> staging buffer
+    // transition back if necessary
+
+    if (vko->ffmpeg != NULL) {
+        VkCommandBuffer cmd = beginSingleTimeCommands(vko);
+        
+        transitionImageLayout(vko, cmd, vko->swapchainImages[currentFrame], vko->surfaceFormat.format, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        copyImage(vko, cmd, vko->surfaceFormat.format, vko->swapchainImages[currentFrame], vko->stagingImage, vko->width, vko->height);
+        endSingleTimeCommands(vko, cmd);
+
+        void *data;
+        vkMapMemory(vko->device, vko->stagingMemory, 0, VK_WHOLE_SIZE, 0, &data);
+        fwrite(data, 1, vko->width * vko->height, vko->ffmpeg);
+        vkUnmapMemory(vko->device, vko->stagingMemory);
+    }
+
     vkEndCommandBuffer(vko->commandBuffers[i]);
 }

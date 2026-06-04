@@ -1,5 +1,7 @@
 #include "renderer.h"
 
+// #define DEBUG
+
 static void initWindow(vk_context *vko) {
     if (!glfwInit()) {
         printf("Failed to initialize GLFW\n");
@@ -86,6 +88,8 @@ static void createInstance(vk_context *vko) {
         }
     }
 
+    #ifdef DEBUG
+
     if (validationLayerFound) {
         createInfo.enabledLayerCount = 1;
         createInfo.ppEnabledLayerNames = layers;
@@ -93,6 +97,12 @@ static void createInstance(vk_context *vko) {
         createInfo.enabledLayerCount = 0;
         createInfo.ppEnabledLayerNames = NULL;
     }
+
+    #else
+    createInfo.enabledLayerCount = 0;
+    createInfo.ppEnabledLayerNames = NULL;
+
+    #endif
 
     free(availableLayers);
 
@@ -388,14 +398,14 @@ static void initVulkan(vk_context *vko) {
             vko,
             vko->width,
             vko->height,
-            VK_FORMAT_R32_SFLOAT,
-            VK_IMAGE_TILING_OPTIMAL,                                  // need transfer for staging
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_TILING_OPTIMAL,                                  // need transfer for staging. dst for staging -> device, src for device -> staging (outputting to video)
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, // all of these will have staging copies
             &vko->smokeMapImages[ping], &vko->smokeMapImageMemories[ping]
         );
-        createImageView(vko, vko->smokeMapImages[ping], VK_FORMAT_R32_SFLOAT, VK_IMAGE_ASPECT_COLOR_BIT, &vko->smokeMapImageViews[ping]);
+        createImageView(vko, vko->smokeMapImages[ping], VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT, &vko->smokeMapImageViews[ping]);
 
         createImage( // velocities x map
             vko,
@@ -403,7 +413,7 @@ static void initVulkan(vk_context *vko) {
             vko->height,
             VK_FORMAT_R32_SFLOAT,
             VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             &vko->horizontalVelocitiesImages[ping], &vko->horizontalVelocitiesImageMemories[ping]
@@ -416,7 +426,7 @@ static void initVulkan(vk_context *vko) {
             vko->height + 1, // +1 for vertical
             VK_FORMAT_R32_SFLOAT,
             VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             &vko->verticalVelocitiesImages[ping], &vko->verticalVelocitiesImageMemories[ping]
@@ -429,7 +439,7 @@ static void initVulkan(vk_context *vko) {
             vko->height,
             VK_FORMAT_R32_SFLOAT,
             VK_IMAGE_TILING_OPTIMAL,
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             &vko->pressureMapImages[ping], &vko->pressureMapImageMemories[ping]

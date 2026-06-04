@@ -122,6 +122,21 @@ void transitionImageLayout(vk_context *vko, VkCommandBuffer cmd, VkImage image, 
         sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
         destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     }
+    // for recording
+    else if (oldLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    }
+    else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = 0;
+
+        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    }
     else {
         printf("no valid pair of old and new layouts found\n");
         exit(1);
@@ -194,12 +209,12 @@ void createSampler(vk_context *vko, VkSampler *pSampler) {
     }
 }
 
-void copyStagingToDeviceImage(vk_context *vko, VkCommandBuffer cmd, VkFormat imageFormat, VkImage stagingImage, VkImage deviceImage, uint32_t width, uint32_t height) {
+void copyImage(vk_context *vko, VkCommandBuffer cmd, VkFormat imageFormat, VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height) {
     // first convert staging image layout into a transfer src optimal layout
-    transitionImageLayout(vko, cmd, stagingImage, imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    transitionImageLayout(vko, cmd, srcImage, imageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
     // define copy region
-    VkImageCopy copyRegion = {};
+    VkImageCopy copyRegion = {0};
     copyRegion.srcSubresource = (VkImageSubresourceLayers) { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
     copyRegion.srcOffset = (VkOffset3D) { 0, 0, 0 };
     copyRegion.dstSubresource = (VkImageSubresourceLayers) { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
@@ -209,11 +224,11 @@ void copyStagingToDeviceImage(vk_context *vko, VkCommandBuffer cmd, VkFormat ima
     // execute the GPU copy
     vkCmdCopyImage(
         cmd,
-        stagingImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-        deviceImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         1, &copyRegion
     );
 
     // pipeline barrier: transition device image to storage layout after finishing copying
-    transitionImageLayout(vko, cmd, deviceImage, imageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
+    transitionImageLayout(vko, cmd, dstImage, imageFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL);
 }

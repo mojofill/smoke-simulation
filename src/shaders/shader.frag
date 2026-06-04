@@ -3,18 +3,18 @@
 layout(location = 0) in vec2 outNDC;
 layout(location = 0) out vec4 outColor;
 // ping
-layout (binding = 0, r32f) uniform readonly image2D smokeMapInput;
-layout (binding = 1, r32f) uniform readonly image2D horizontalVelocitiesInput;
-layout (binding = 2, r32f) uniform readonly image2D verticalVelocitiesInput;
-layout (binding = 3, r32f) uniform readonly image2D pressureMapInput;
-layout (binding = 4, r32f) uniform readonly image2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
+layout (binding = 0, rgba8) uniform readonly image2D smokeMapInput;
+layout (binding = 1, r32f)  uniform readonly image2D horizontalVelocitiesInput;
+layout (binding = 2, r32f)  uniform readonly image2D verticalVelocitiesInput;
+layout (binding = 3, r32f)  uniform readonly image2D pressureMapInput;
+layout (binding = 4, r32f)  uniform readonly image2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
 
 // pong
-layout (binding = 5, r32f) uniform writeonly image2D smokeMapOutput;
-layout (binding = 6, r32f) uniform writeonly image2D horizontalVelocitiesOutput;
-layout (binding = 7, r32f) uniform writeonly image2D verticalVelocitiesOutput;
-layout (binding = 8, r32f) uniform writeonly image2D pressureMapOutput;
-layout (binding = 9, r32f) uniform writeonly image2D solidMapOutput;
+layout (binding = 5, rgba8) uniform writeonly image2D smokeMapOutput;
+layout (binding = 6, r32f)  uniform writeonly image2D horizontalVelocitiesOutput;
+layout (binding = 7, r32f)  uniform writeonly image2D verticalVelocitiesOutput;
+layout (binding = 8, r32f)  uniform writeonly image2D pressureMapOutput;
+layout (binding = 9, r32f)  uniform writeonly image2D solidMapOutput;
 
 // ubo
 layout (binding = 10) uniform UniformBufferObject {
@@ -67,10 +67,9 @@ void main() {
     
     // oh well. it PROBABLY works i just dont know
 
-    float smokeIntensity = imageLoad(smokeMapInput, texCoord).x;
-    vec4 smokeColor = vec4(0, 1, 1, 1);
+    vec4 smokeColor = imageLoad(smokeMapInput, texCoord);
 
-    outColor = vec4(smokeIntensity * smokeColor);
+    outColor = vec4(smokeColor);
     // outColor = mix(pressureColor, divergenceColor, 0.5);
     if (texCoord.x == width - 1 || texCoord.y == height - 1) outColor = vec4(0);
 }

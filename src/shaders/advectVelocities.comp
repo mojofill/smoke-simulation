@@ -2,18 +2,18 @@
 
 layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 // ping
-layout (binding = 0, r32f) uniform readonly image2D smokeMapInput;
-layout (binding = 1, r32f) uniform readonly image2D horizontalVelocitiesInput;
-layout (binding = 2, r32f) uniform readonly image2D verticalVelocitiesInput;
-layout (binding = 3, r32f) uniform readonly image2D pressureMapInput;
-layout (binding = 4, r8ui) uniform readonly uimage2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
+layout (binding = 0, rgba8) uniform readonly image2D smokeMapInput;
+layout (binding = 1, r32f)  uniform readonly image2D horizontalVelocitiesInput;
+layout (binding = 2, r32f)  uniform readonly image2D verticalVelocitiesInput;
+layout (binding = 3, r32f)  uniform readonly image2D pressureMapInput;
+layout (binding = 4, r8ui)  uniform readonly uimage2D solidMapInput; // technically dont need ping pong for solid map, since unchanging
 
 // pong
-layout (binding = 5, r32f) uniform writeonly image2D smokeMapOutput;
-layout (binding = 6, r32f) uniform writeonly image2D horizontalVelocitiesOutput;
-layout (binding = 7, r32f) uniform writeonly image2D verticalVelocitiesOutput;
-layout (binding = 8, r32f) uniform writeonly image2D pressureMapOutput;
-layout (binding = 9, r8ui) uniform writeonly uimage2D solidMapOutput;
+layout (binding = 5, rgba8) uniform writeonly image2D smokeMapOutput;
+layout (binding = 6, r32f)  uniform writeonly image2D horizontalVelocitiesOutput;
+layout (binding = 7, r32f)  uniform writeonly image2D verticalVelocitiesOutput;
+layout (binding = 8, r32f)  uniform writeonly image2D pressureMapOutput;
+layout (binding = 9, r8ui)  uniform writeonly uimage2D solidMapOutput;
 
 // ubo
 layout (binding = 10) uniform UniformBufferObject {
@@ -177,15 +177,41 @@ void main() {
 
     if (!isSolid(pos) && !isSolid(pos - ivec2(1, 0)) && !isSolid(pos - ivec2(0, 1))) {
         // ig here add some stuff to the smoke map
-        float r = 10;
+        float r = 20;
         if (false
-        || (pos.x - (width/2 - 600)) * (pos.x - (width/2 - 600)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
+        || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
         // || (pos.x - (width/2 + 100)) * (pos.x - (width/2 + 100)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
         // || (pos.x - (width/2)) * (pos.x - (width/2)) + ((pos.y - (height/2 - 100))) * (pos.y - (height/2 - 100)) <= r * r
         // || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2 + 100)) * (pos.y - (height/2 + 100)) <= r * r
         // || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
             ) {
-            imageStore(smokeMapOutput, pos, vec4(1));
+            vec4 color = vec4(0);
+            int x = pos.x;
+            int y = pos.y;
+            vec4 magenta = vec4(1, 0, 1, 1);
+            vec4 cyan = vec4(0, 1, 1, 1);
+            vec4 white = vec4(1, 1, 1, 1); // turn this back to green
+            vec4 green = vec4(0, 1, 0, 1);
+            vec4 other = vec4(1);
+            if (x < width/2 && y < height/2) {
+                color = magenta;
+                other = white;
+            }
+            else if (x >= width/2 && y < height/2) {
+                color = white;
+                other = magenta;
+            }
+            else if (x < width/2 && y >= height/2) {
+                color = white;
+                other = cyan;
+            }
+            else {
+                color = cyan;
+                other = white;
+            }
+            imageStore(smokeMapOutput, pos, color);
+            imageStore(smokeMapOutput, pos - ivec2(400, 0), other);
+            imageStore(smokeMapOutput, pos + ivec2(400, 0), other);
         }
     }
 

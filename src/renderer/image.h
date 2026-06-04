@@ -8,6 +8,6 @@ void createImage(vk_context *vko, uint32_t width, uint32_t height, VkFormat form
 void createImageView(vk_context *vko, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags, VkImageView *imageView);
 void createSampler(vk_context *vko, VkSampler *pSampler);
 void transitionImageLayout(vk_context *vko, VkCommandBuffer cmd, VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-void copyStagingToDeviceImage(vk_context *vko, VkCommandBuffer cmdBuffer, VkFormat imageFormat, VkImage stagingImage, VkImage deviceImage, uint32_t width, uint32_t height);
+void copyImage(vk_context *vko, VkCommandBuffer cmd, VkFormat imageFormat, VkImage srcImage, VkImage dstImage, uint32_t width, uint32_t height);
 
 #endif

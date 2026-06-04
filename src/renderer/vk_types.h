@@ -67,6 +67,12 @@ typedef struct vk_context {
     int ping; // for ping pong
     int width;
     int height;
+    int pause;
+
+    FILE *ffmpeg; // for recording
+    VkImage stagingImage;
+    VkDeviceMemory stagingMemory;
+    void *mappedStagingData;
 
     // Uniform buffer
     VkBuffer uniformBuffers[UNIFORM_BUFFER_COUNT];

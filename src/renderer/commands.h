@@ -4,6 +4,7 @@
 #include "vk_types.h"
 #include "compute_pipeline.h"
 #include "descriptors.h" // for ubo
+#include "image.h" // for copyImage (for recording)
 #include <string.h> // for memcpy
 
 void createCommandPool(vk_context *vko);
