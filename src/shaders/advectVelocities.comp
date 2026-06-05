@@ -209,7 +209,7 @@ void main() {
                 color = cyan;
                 other = white;
             }
-            imageStore(smokeMapOutput, pos, color);
+            imageStore(smokeMapOutput, pos, (pos.y > height/2 - 5 && pos.y < height/2 + 5) ? white : color == white ? other == magenta ? cyan : magenta : color);
             imageStore(smokeMapOutput, pos - ivec2(400, 0), other);
             imageStore(smokeMapOutput, pos + ivec2(400, 0), other);
         }
