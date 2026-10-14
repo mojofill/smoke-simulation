@@ -134,18 +134,18 @@ void initializeStorageImages(vk_context *vko) {
 
             uint8_t* pixel = (uint8_t*)rowStart + x * 4;
 
-            if (y < vko->height/2) {
-                pixel[0] = x < vko->width/2 ? c : c;
-                pixel[1] = x < vko->width/2 ? 0 : c;
-                pixel[2] = x < vko->width/2 ? c : c;
-                pixel[3] = 255;
-            }
-            else {
-                pixel[0] = x < vko->width/2 ? c : 0;
-                pixel[1] = x < vko->width/2 ? c : c;
-                pixel[2] = x < vko->width/2 ? c : c;
-                pixel[3] = 255;
-            }
+            // if (y < vko->height/2) {
+            //     pixel[0] = x < vko->width/2 ? c : c;
+            //     pixel[1] = x < vko->width/2 ? 0 : c;
+            //     pixel[2] = x < vko->width/2 ? c : c;
+            //     pixel[3] = 255;
+            // }
+            // else {
+            //     pixel[0] = x < vko->width/2 ? c : 0;
+            //     pixel[1] = x < vko->width/2 ? c : c;
+            //     pixel[2] = x < vko->width/2 ? c : c;
+            //     pixel[3] = 255;
+            // }
         }
     }
 

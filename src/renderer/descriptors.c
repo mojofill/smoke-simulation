@@ -82,8 +82,9 @@ void createDescriptorSets(vk_context *vko) {
         allocInfo.descriptorSetCount = (uint32_t) MAX_FRAMES_IN_FLIGHT;
         allocInfo.pSetLayouts = layouts;
 
-        if (vkAllocateDescriptorSets(vko->device, &allocInfo, vko->descriptorSets[ping]) != VK_SUCCESS) {
-            fprintf(stderr, "Failed to create descriptor sets\n");
+        VkResult res = vkAllocateDescriptorSets(vko->device, &allocInfo, vko->descriptorSets[ping]);
+        if (res != VK_SUCCESS) {
+            fprintf(stderr, "Failed to create descriptor sets. res = %d\n", res);
             exit(1);
         }
         // populate descriptors

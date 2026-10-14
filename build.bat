@@ -13,7 +13,7 @@ glslc src\shaders\updateVelocities.comp -o src\spvs\updateVelocities.spv
 
 echo Compiling CMake...
 cmake -S . -B build -G "MinGW Makefiles" ^
-  -DCMAKE_C_COMPILER=C:/MinGW/bin/gcc.exe ^
+  -DCMAKE_C_COMPILER=C:/msys64/ucrt64/bin/gcc.exe ^
   -DCMAKE_BUILD_TYPE=Release ^
   -Dglfw3_DIR=C:/glfw-mingw/lib/cmake/glfw3
 

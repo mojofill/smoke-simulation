@@ -1,3 +1,0 @@
-C:/Users/henry/Desktop/vulkan-projects/smoke-simulation/build/CMakeFiles/vk_app.dir
-C:/Users/henry/Desktop/vulkan-projects/smoke-simulation/build/CMakeFiles/edit_cache.dir
-C:/Users/henry/Desktop/vulkan-projects/smoke-simulation/build/CMakeFiles/rebuild_cache.dir
