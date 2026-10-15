@@ -289,8 +289,8 @@ void initializeStorageImages(vk_context *vko) {
             uint8_t c = 0; // for now set everything to be air
             if (y <= 1 || y >= vko->height - 2 || x <= 1 || x >= vko->width - 2) c = 1;
 
-            if ((x - (vko->width/2 - 300)) * (x - (vko->width/2 - 300)) + ((y - vko->height/2)) * (y - vko->height/2) <= 40 * 40) {
-                // c = 1;
+            if ((x - (vko->width/2 - 300)) * (x - (vko->width/2 - 300)) + ((y - vko->height/2)) * (y - vko->height/2) <= 70 * 70) {
+                c = 1;
             }
 
             memcpy(rowStart + (x * 1), &c, 1); // uint8_t is just one byte

@@ -47,29 +47,34 @@ void main() {
     float divergence = calculateVelocityDivergenceAtCell(texCoord.x, texCoord.y);
     vec4 blue = vec4(0.0, 0.0, 1.0, 1.0);
     vec4 red = vec4(1.0, 0.0, 0.0, 1.0);
+    vec4 green = vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 yellow = vec4(1.0, 1.0, 0.0, 1.0);
     vec4 pressureColor = vec4(0);
     vec4 divergenceColor = vec4(0);
-    float k = 0.1;
-    if (divergence < 0) {
+    float k = 1;
+    if (pressure < 0) {
         pressureColor = -divergence * blue * k;
     }
-    else if (divergence >= 0) {
+    else if (pressure >= 0) {
         pressureColor = divergence * red * k;
     }
 
-    k = 0.00000000001;
-    if (pressure < 0) {
-        divergenceColor = -pressure * blue * k;
+    k = 0.00001;
+    if (divergence < 0) {
+        divergenceColor = -pressure * green * k;
     }
     else {
-        divergenceColor = pressure * red * k;
+        divergenceColor = pressure * yellow * k;
     }
     
     // oh well. it PROBABLY works i just dont know
 
     vec4 smokeColor = imageLoad(smokeMapInput, texCoord);
 
+    // for just smoke colors, leave this line
     outColor = vec4(smokeColor);
-    // outColor = mix(pressureColor, divergenceColor, 0.5);
+    // for pressure and divergence shading, uncomment this line and comment the line above
+    outColor = mix(pressureColor, divergenceColor, 0.5);
+    outColor = 2 * mix(smokeColor, pressureColor, 0.5);
     if (texCoord.x == width - 1 || texCoord.y == height - 1) outColor = vec4(0);
 }

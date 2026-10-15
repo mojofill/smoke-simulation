@@ -177,7 +177,7 @@ void main() {
 
     if (!isSolid(pos) && !isSolid(pos - ivec2(1, 0)) && !isSolid(pos - ivec2(0, 1))) {
         // ig here add some stuff to the smoke map
-        float r = 20;
+        float r = 50;
         if (false
         || (pos.x - (width/2)) * (pos.x - (width/2)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
         // || (pos.x - (width/2 + 100)) * (pos.x - (width/2 + 100)) + (pos.y - (height/2)) * (pos.y - (height/2)) <= r * r
@@ -209,9 +209,12 @@ void main() {
                 color = cyan;
                 other = white;
             }
-            imageStore(smokeMapOutput, pos, (pos.y > height/2 - 5 && pos.y < height/2 + 5) ? white : color == white ? other == magenta ? cyan : magenta : color);
-            imageStore(smokeMapOutput, pos - ivec2(400, 0), other);
-            imageStore(smokeMapOutput, pos + ivec2(400, 0), other);
+            vec4 t = color;
+            color = other;
+            other = t;
+            // imageStore(smokeMapOutput, pos, (pos.y > height/2 - 5 && pos.y < height/2 + 5) ? white : color == white ? other == magenta ? cyan : magenta : color);
+            // imageStore(smokeMapOutput, pos - ivec2(400, 0), other);
+            imageStore(smokeMapOutput, pos + ivec2(-500, 0), other);
         }
     }
 

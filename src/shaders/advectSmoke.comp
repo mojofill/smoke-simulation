@@ -155,7 +155,7 @@ void semiLagrangianAdvectSmoke() {
 void main() {
     ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
 
-    // do go beyond extra threads
+    // do not go beyond extra threads
     if (pos.x >= width || pos.y >= height) return;
 
     imageStore(smokeMapOutput, pos, imageLoad(smokeMapInput, pos));
@@ -174,10 +174,10 @@ void main() {
     imageStore(pressureMapOutput, pos, imageLoad(pressureMapInput, pos));
 
     if (!isSolid(pos) && !isSolid(pos - ivec2(1, 0))) {
-        if (pos.y > height/2 - 10 && pos.y < height/2 + 10) {
+        if (pos.y > height/2 - 50 && pos.y < height/2 + 50) {
             int k = pos.x < width/2 ? -1 : 1;
-            // k = 1;
-            if (pos.x > 50 && pos.x < width - 50) imageStore(horizontalVelocitiesOutput, pos, vec4(k * 250.0f));
+            k = 1;
+            if (pos.x > 50 && pos.x < width - 50) imageStore(horizontalVelocitiesOutput, pos, vec4(k * 100.0f));
         }
     }
 
